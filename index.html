@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mutuo Casa - Calcolatore & Confronto Ammortamenti</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#035485',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Font Inter & FontAwesome Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Chart.js CDN per i grafici -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar per la tabella */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.5);
+            border-radius: 4px;
+        }
+        .dark ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: rgba(75, 85, 99, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-full transition-colors duration-200">
+
+    <!-- Navbar / Header -->
+    <header class="sticky top-0 z-30 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-brand-500 text-white rounded-xl shadow-md">
+                    <i class="fa-solid fa-house-circle-check text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight text-slate-900 dark:text-white">Mutuo Casa Pro</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Simulatore e Confronto Ammortamenti</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <!-- Theme Switcher Button -->
+                <button id="themeToggleBtn" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors" title="Cambia Tema">
+                    <i id="themeIcon" class="fa-solid fa-moon"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- Navigation Tabs (Calcolo Singolo vs Confronto) -->
+        <div class="flex flex-wrap border-b border-slate-200 dark:border-slate-700 mb-8 gap-2">
+            <button id="tabSingleBtn" onclick="switchMainTab('single')" class="px-5 py-3 font-semibold text-sm border-b-2 border-brand-500 text-brand-600 dark:text-brand-400 flex items-center gap-2 transition-all">
+                <i class="fa-solid fa-calculator"></i> Calcolo Singolo & Piano
+            </button>
+            <button id="tabCompareBtn" onclick="switchMainTab('compare')" class="px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 flex items-center gap-2 transition-all">
+                <i class="fa-solid fa-code-compare"></i> Confronto Metodi
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+            <!-- Sidebar dei Parametri di Input -->
+            <div class="lg:col-span-4 space-y-6">
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-700/80 space-y-5">
+                    <div class="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-700">
+                        <h2 class="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-base">
+                            <i class="fa-solid fa-sliders text-brand-500"></i> Parametri Mutuo
+                        </h2>
+                        <button onclick="resetInputs()" class="text-xs text-slate-400 hover:text-brand-500 transition-colors">Ripristina</button>
+                    </div>
+
+                    <!-- Input Form -->
+                    <form id="loanForm" onsubmit="event.preventDefault(); calculate();" class="space-y-4">
+                        
+                        <!-- Importo del Prestito -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Importo del Capitale (€)</label>
+                            <div class="relative rounded-xl shadow-sm">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">€</div>
+                                <input type="number" id="inputAmount" value="200000" min="1000" step="1000" required class="w-full pl-8 pr-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none text-sm font-medium">
+                            </div>
+                        </div>
+
+                        <!-- Tasso di Interesse Annuo -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Tasso d'Interesse Annuo / TAN (%)</label>
+                            <div class="relative rounded-xl shadow-sm">
+                                <input type="number" id="inputRate" value="3.5" min="0.01" step="0.01" required class="w-full pl-3 pr-8 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none text-sm font-medium">
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">%</div>
+                            </div>
+                        </div>
+
+                        <!-- Durata del Mutuo -->
+                        <div class="grid grid-cols-3 gap-2">
+                            <div class="col-span-2">
+                                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Durata</label>
+                                <input type="number" id="inputDuration" value="25" min="1" max="50" required class="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none text-sm font-medium">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Unità</label>
+                                <select id="inputDurationType" onchange="calculate()" class="w-full px-2 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none text-sm font-medium">
+                                    <option value="years" selected>Anni</option>
+                                    <option value="months">Mesi</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Frequenza Rata -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Frequenza Pagamento</label>
+                            <select id="inputFrequency" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none text-sm font-medium">
+                                <option value="12" selected>Mensile (12/anno)</option>
+                                <option value="6">Bimestrale (6/anno)</option>
+                                <option value="4">Trimestrale (4/anno)</option>
+                                <option value="2">Semestrale (2/anno)</option>
+                                <option value="1">Annuale (1/anno)</option>
+                            </select>
+                        </div>
+
+                        <!-- Metodo Ammortamento (Visibile in Calcolo Singolo) -->
+                        <div id="methodSelectContainer">
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Metodo di Ammortamento</label>
+                            <select id="inputMethod" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none text-sm font-medium">
+                                <option value="french" selected>Francese (Rata costante)</option>
+                                <option value="italian">Italiano (Capitale costante)</option>
+                                <option value="interestOnly">Solo Interessi / Pre-ammortamento</option>
+                                <option value="german">Tedesco (Interessi anticipati)</option>
+                            </select>
+                        </div>
+
+                        <!-- Spese Accessorie Accordion -->
+                        <div class="border border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-50/50 dark:bg-slate-900/50">
+                            <button type="button" onclick="toggleExpenses()" class="w-full flex justify-between items-center text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                <span class="flex items-center gap-1.5"><i class="fa-solid fa-receipt text-slate-400"></i> Spese Accessorie & Istruttoria</span>
+                                <i id="expensesChevron" class="fa-solid fa-chevron-down text-slate-400 text-xs transition-transform"></i>
+                            </button>
+                            <div id="expensesContent" class="hidden mt-3 space-y-3 pt-2 border-t border-slate-200 dark:border-slate-700">
+                                <div>
+                                    <label class="block text-[11px] text-slate-500 dark:text-slate-400 mb-1">Spese Istruttoria/Perizia Una Tantum (€)</label>
+                                    <input type="number" id="inputInitialFees" value="1200" min="0" step="50" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-slate-900 dark:text-white text-xs">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] text-slate-500 dark:text-slate-400 mb-1">Incasso Rata / Spese Periodiche (€/rata)</label>
+                                    <input type="number" id="inputRecurringFees" value="2.5" min="0" step="0.5" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-slate-900 dark:text-white text-xs">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Calcolo Extra: Estinzione Parziale / Extra Rimborso -->
+                        <div class="border border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-50/50 dark:bg-slate-900/50">
+                            <button type="button" onclick="toggleExtraPayments()" class="w-full flex justify-between items-center text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                <span class="flex items-center gap-1.5"><i class="fa-solid fa-piggy-bank text-slate-400"></i> Extra Rimborso Anticipato</span>
+                                <i id="extraChevron" class="fa-solid fa-chevron-down text-slate-400 text-xs transition-transform"></i>
+                            </button>
+                            <div id="extraContent" class="hidden mt-3 space-y-3 pt-2 border-t border-slate-200 dark:border-slate-700">
+                                <div>
+                                    <label class="block text-[11px] text-slate-500 dark:text-slate-400 mb-1">Rimborso Straordinario (€)</label>
+                                    <input type="number" id="inputExtraAmount" value="0" min="0" step="500" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-slate-900 dark:text-white text-xs">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] text-slate-500 dark:text-slate-400 mb-1">Versato alla Rata numero</label>
+                                    <input type="number" id="inputExtraPaymentPeriod" value="60" min="1" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-slate-900 dark:text-white text-xs">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full py-3 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-xl shadow-md transition-colors flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-arrows-rotate"></i> Calcola Mutuo
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Area principale dei Risultati (Calcolo Singolo) -->
+            <div id="singleView" class="lg:col-span-8 space-y-6">
+                
+                <!-- Cards Riepilogo -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Rata Iniziale / Media -->
+                    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-700/80">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-1">Rata Iniziale</span>
+                        <div class="text-2xl font-bold text-slate-900 dark:text-white" id="cardInstallment">€ 0.00</div>
+                        <span class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block" id="cardInstallmentSub">per periodo</span>
+                    </div>
+
+                    <!-- Totale Interessi -->
+                    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-700/80">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-1">Totale Interessi</span>
+                        <div class="text-2xl font-bold text-amber-500" id="cardTotalInterest">€ 0.00</div>
+                        <span class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block" id="cardInterestRatio">0% del capitale</span>
+                    </div>
+
+                    <!-- Costo Totale Mutuo -->
+                    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-700/80">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-1">Costo Totale</span>
+                        <div class="text-2xl font-bold text-brand-600 dark:text-brand-400" id="cardTotalCost">€ 0.00</div>
+                        <span class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block" id="cardTotalCostSub">capitale + interessi + spese</span>
+                    </div>
+
+                    <!-- TAEG Stimato -->
+                    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-700/80">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-1">TAEG Stimato</span>
+                        <div class="text-2xl font-bold text-emerald-500" id="cardTaeg">0.00%</div>
+                        <span class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block" id="cardTaegSub">TAN: 0.00%</span>
+                    </div>
+                </div>
+
+                <!-- Grafici Section -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Pie Chart: Cost Breakdown -->
+                    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-700/80 flex flex-col justify-between">
+                        <h3 class="text-sm font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-brand-500"></i> Composizione Costi
+                        </h3>
+                        <div class="relative w-full h-56 flex items-center justify-center">
+                            <canvas id="costBreakdownChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Line Chart: Amortization Evolution -->
+                    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-700/80">
+                        <h3 class="text-sm font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-line text-brand-500"></i> Evoluzione Debito Residuo
+                        </h3>
+                        <div class="relative w-full h-56">
+                            <canvas id="balanceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Piano di Ammortamento Tabella -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-700/80 overflow-hidden">
+                    <div class="p-5 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h3 class="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                <i class="fa-solid fa-table-list text-brand-500"></i> Piano di Ammortamento
+                            </h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Dettaglio periodico di tutte le rate calcolate</p>
+                        </div>
+
+                        <!-- Search & Export Controls -->
+                        <div class="flex items-center gap-3">
+                            <div class="relative">
+                                <input type="text" id="tableSearch" onkeyup="filterTable()" placeholder="Cerca rata/anno..." class="pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-brand-500">
+                                <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2 text-slate-400 text-xs"></i>
+                            </div>
+                            <button onclick="exportCSV()" class="px-3 py-1.5 text-xs bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold rounded-xl border border-slate-200 dark:border-slate-600 transition-colors flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-csv text-emerald-500"></i> CSV
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Scrollable Table -->
+                    <div class="overflow-x-auto max-h-[420px]">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 dark:bg-slate-900/80 sticky top-0 border-b border-slate-200 dark:border-slate-700 font-semibold text-slate-600 dark:text-slate-300">
+                                <tr>
+                                    <th class="py-3 px-4"># Rata</th>
+                                    <th class="py-3 px-4">Rata Totale</th>
+                                    <th class="py-3 px-4">Quota Capitale</th>
+                                    <th class="py-3 px-4">Quota Interessi</th>
+                                    <th class="py-3 px-4">Spese Incasso</th>
+                                    <th class="py-3 px-4">Debito Residuo</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scheduleTableBody" class="divide-y divide-slate-100 dark:divide-slate-700/50 text-slate-700 dark:text-slate-300">
+                                <!-- Popolato dinamicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination Footer -->
+                    <div class="p-4 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center text-xs text-slate-500">
+                        <span id="tablePaginationInfo">Mostrando 0 rate</span>
+                        <div class="flex gap-2" id="paginationControls">
+                            <!-- Controlli di paginazione inseriti via JS -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- View Confronto Metodi -->
+            <div id="compareView" class="hidden lg:col-span-8 space-y-6">
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-700/80">
+                    <h3 class="text-base font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-code-compare text-brand-500"></i> Confronto Diretto dei Metodi
+                    </h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-6">
+                        Panoramica comparativa a parità di importo, durata e tasso d'interesse selezionati nei parametri a sinistra.
+                    </p>
+
+                    <!-- Comparison Grid Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" id="comparisonCardsContainer">
+                        <!-- Popolato dinamicamente -->
+                    </div>
+
+                    <!-- Comparison Chart -->
+                    <div class="mt-8">
+                        <h4 class="text-sm font-semibold text-slate-800 dark:text-white mb-4">Confronto Debito Residuo nel Tempo</h4>
+                        <div class="relative w-full h-72">
+                            <canvas id="compareChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- JavaScript Logica dell'Applicazione -->
+    <script>
+        // State Globale
+        let currentSchedule = [];
+        let filteredSchedule = [];
+        let currentPage = 1;
+        const pageSize = 50;
+
+        // Istanze dei Grafici Chart.js
+        let costChartInstance = null;
+        let balanceChartInstance = null;
+        let compareChartInstance = null;
+
+        // Inizializzazione al caricamento della pagina
+        window.onload = function() {
+            initTheme();
+            calculate();
+        };
+
+        // --- Gestione Tema Dark/Light ---
+        function initTheme() {
+            const themeToggleBtn = document.getElementById('themeToggleBtn');
+            const themeIcon = document.getElementById('themeIcon');
+            
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.documentElement.classList.add('dark');
+                themeIcon.className = 'fa-solid fa-sun';
+            }
+
+            themeToggleBtn.addEventListener('click', () => {
+                document.documentElement.classList.toggle('dark');
+                const isDark = document.documentElement.classList.contains('dark');
+                themeIcon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+                // Aggiorna colori dei grafici
+                calculate();
+            });
+        }
+
+        // --- Navigazione Tab ---
+        function switchMainTab(tab) {
+            const singleView = document.getElementById('singleView');
+            const compareView = document.getElementById('compareView');
+            const tabSingleBtn = document.getElementById('tabSingleBtn');
+            const tabCompareBtn = document.getElementById('tabCompareBtn');
+            const methodContainer = document.getElementById('methodSelectContainer');
+
+            if (tab === 'single') {
+                singleView.classList.remove('hidden');
+                compareView.classList.add('hidden');
+                methodContainer.classList.remove('hidden');
+
+                tabSingleBtn.className = 'px-5 py-3 font-semibold text-sm border-b-2 border-brand-500 text-brand-600 dark:text-brand-400 flex items-center gap-2 transition-all';
+                tabCompareBtn.className = 'px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 flex items-center gap-2 transition-all';
+            } else {
+                singleView.classList.add('hidden');
+                compareView.classList.remove('hidden');
+                methodContainer.classList.add('hidden');
+
+                tabCompareBtn.className = 'px-5 py-3 font-semibold text-sm border-b-2 border-brand-500 text-brand-600 dark:text-brand-400 flex items-center gap-2 transition-all';
+                tabSingleBtn.className = 'px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 flex items-center gap-2 transition-all';
+                
+                renderComparison();
+            }
+        }
+
+        // Accordion Helpers
+        function toggleExpenses() {
+            const content = document.getElementById('expensesContent');
+            const chevron = document.getElementById('expensesChevron');
+            content.classList.toggle('hidden');
+            chevron.classList.toggle('rotate-180');
+        }
+
+        function toggleExtraPayments() {
+            const content = document.getElementById('extraContent');
+            const chevron = document.getElementById('extraChevron');
+            content.classList.toggle('hidden');
+            chevron.classList.toggle('rotate-180');
+        }
+
+        function resetInputs() {
+            document.getElementById('inputAmount').value = 200000;
+            document.getElementById('inputRate').value = 3.5;
+            document.getElementById('inputDuration').value = 25;
+            document.getElementById('inputDurationType').value = 'years';
+            document.getElementById('inputFrequency').value = 12;
+            document.getElementById('inputMethod').value = 'french';
+            document.getElementById('inputInitialFees').value = 1200;
+            document.getElementById('inputRecurringFees').value = 2.5;
+            document.getElementById('inputExtraAmount').value = 0;
+            document.getElementById('inputExtraPaymentPeriod').value = 60;
+            calculate();
+        }
+
+        // --- CORE LOGIC: CALCOLO AMMORTAMENTO ---
+        function getInputs() {
+            const amount = parseFloat(document.getElementById('inputAmount').value) || 0;
+            const annualRate = (parseFloat(document.getElementById('inputRate').value) || 0) / 100;
+            let durationVal = parseInt(document.getElementById('inputDuration').value) || 1;
+            const durationType = document.getElementById('inputDurationType').value;
+            const frequency = parseInt(document.getElementById('inputFrequency').value) || 12;
+            const method = document.getElementById('inputMethod').value;
+
+            const initialFees = parseFloat(document.getElementById('inputInitialFees').value) || 0;
+            const recurringFees = parseFloat(document.getElementById('inputRecurringFees').value) || 0;
+            const extraAmount = parseFloat(document.getElementById('inputExtraAmount').value) || 0;
+            const extraPeriod = parseInt(document.getElementById('inputExtraPaymentPeriod').value) || 0;
+
+            const totalPeriods = durationType === 'years' ? durationVal * frequency : durationVal;
+            const periodicRate = annualRate / frequency;
+
+            return {
+                amount,
+                annualRate,
+                totalPeriods,
+                frequency,
+                periodicRate,
+                method,
+                initialFees,
+                recurringFees,
+                extraAmount,
+                extraPeriod
+            };
+        }
+
+        function calculateAmortizationSchedule(params) {
+            const { amount, totalPeriods, periodicRate, method, recurringFees, extraAmount, extraPeriod } = params;
+            let balance = amount;
+            let schedule = [];
+            let totalInterest = 0;
+
+            if (method === 'french') {
+                // Rata Costante Francese: R = C * [i / (1 - (1+i)^-n)]
+                const installment = (periodicRate > 0) 
+                    ? amount * (periodicRate / (1 - Math.pow(1 + periodicRate, -totalPeriods)))
+                    : amount / totalPeriods;
+
+                for (let i = 1; i <= totalPeriods; i++) {
+                    if (balance <= 0) break;
+
+                    let interestQuota = balance * periodicRate;
+                    let principalQuota = installment - interestQuota;
+
+                    if (principalQuota > balance) {
+                        principalQuota = balance;
+                    }
+
+                    let currentExtra = (i === extraPeriod) ? Math.min(extraAmount, balance - principalQuota) : 0;
+                    balance -= (principalQuota + currentExtra);
+                    if (balance < 0.01) balance = 0;
+
+                    totalInterest += interestQuota;
+
+                    schedule.push({
+                        period: i,
+                        installment: principalQuota + interestQuota,
+                        principal: principalQuota,
+                        interest: interestQuota,
+                        fees: recurringFees,
+                        extra: currentExtra,
+                        balance: balance
+                    });
+                }
+
+            } else if (method === 'italian') {
+                // Italiano: Quota Capitale Costante = C / n
+                const constantPrincipal = amount / totalPeriods;
+
+                for (let i = 1; i <= totalPeriods; i++) {
+                    if (balance <= 0) break;
+
+                    let interestQuota = balance * periodicRate;
+                    let principalQuota = Math.min(constantPrincipal, balance);
+
+                    let currentExtra = (i === extraPeriod) ? Math.min(extraAmount, balance - principalQuota) : 0;
+                    balance -= (principalQuota + currentExtra);
+                    if (balance < 0.01) balance = 0;
+
+                    totalInterest += interestQuota;
+
+                    schedule.push({
+                        period: i,
+                        installment: principalQuota + interestQuota,
+                        principal: principalQuota,
+                        interest: interestQuota,
+                        fees: recurringFees,
+                        extra: currentExtra,
+                        balance: balance
+                    });
+                }
+
+            } else if (method === 'interestOnly') {
+                // Solo Interessi (Pre-ammortamento) e quota capitale finale
+                for (let i = 1; i <= totalPeriods; i++) {
+                    if (balance <= 0) break;
+
+                    let interestQuota = balance * periodicRate;
+                    let principalQuota = (i === totalPeriods) ? balance : 0;
+
+                    let currentExtra = (i === extraPeriod) ? Math.min(extraAmount, balance - principalQuota) : 0;
+                    balance -= (principalQuota + currentExtra);
+                    if (balance < 0.01) balance = 0;
+
+                    totalInterest += interestQuota;
+
+                    schedule.push({
+                        period: i,
+                        installment: principalQuota + interestQuota,
+                        principal: principalQuota,
+                        interest: interestQuota,
+                        fees: recurringFees,
+                        extra: currentExtra,
+                        balance: balance
+                    });
+                }
+
+            } else if (method === 'german') {
+                // Ammortamento Tedesco: Interessi corrisposti in via anticipata
+                const constantPrincipal = amount / totalPeriods;
+                let prevInterest = amount * periodicRate; // Primo interesse pagato subito
+
+                for (let i = 1; i <= totalPeriods; i++) {
+                    if (balance <= 0) break;
+
+                    let principalQuota = Math.min(constantPrincipal, balance);
+                    let currentInterest = prevInterest; // Interesse calcolato nel periodo precedente
+
+                    let currentExtra = (i === extraPeriod) ? Math.min(extraAmount, balance - principalQuota) : 0;
+                    balance -= (principalQuota + currentExtra);
+                    if (balance < 0.01) balance = 0;
+
+                    prevInterest = balance * periodicRate; // Prossimo interesse anticipato
+                    totalInterest += currentInterest;
+
+                    schedule.push({
+                        period: i,
+                        installment: principalQuota + currentInterest,
+                        principal: principalQuota,
+                        interest: currentInterest,
+                        fees: recurringFees,
+                        extra: currentExtra,
+                        balance: balance
+                    });
+                }
+            }
+
+            return { schedule, totalInterest };
+        }
+
+        // Estima approssimativa del TAEG (Internal Rate of Return approssimato)
+        function calculateApproxTAEG(amount, initialFees, schedule, frequency) {
+            const netAmount = amount - initialFees;
+            if (netAmount <= 0) return 0;
+
+            let totalPayments = 0;
+            schedule.forEach(item => {
+                totalPayments += item.installment + item.fees + item.extra;
+            });
+
+            // Approssimazione IRR
+            let nYears = schedule.length / frequency;
+            if (nYears === 0) return 0;
+
+            let totalCost = totalPayments + initialFees;
+            let approxRate = (Math.pow(totalCost / netAmount, 1 / nYears) - 1);
+            return Math.max(0, approxRate * 100);
+        }
+
+        // Funzione Principale di Calcolo e Aggiornamento UI
+        function calculate() {
+            const params = getInputs();
+            const { schedule, totalInterest } = calculateAmortizationSchedule(params);
+            
+            currentSchedule = schedule;
+            filteredSchedule = [...schedule];
+
+            // Calcoli Statistici
+            const totalRecurringFees = schedule.reduce((acc, item) => acc + item.fees, 0);
+            const totalCost = params.amount + totalInterest + params.initialFees + totalRecurringFees;
+            const initialInstallment = schedule.length > 0 ? schedule[0].installment + schedule[0].fees : 0;
+            const taeg = calculateApproxTAEG(params.amount, params.initialFees, schedule, params.frequency);
+
+            // Aggiorna Carte UI
+            document.getElementById('cardInstallment').textContent = formatCurrency(initialInstallment);
+            document.getElementById('cardInstallmentSub').textContent = `Frequenza: ${getFrequencyName(params.frequency)}`;
+            
+            document.getElementById('cardTotalInterest').textContent = formatCurrency(totalInterest);
+            document.getElementById('cardInterestRatio').textContent = `${((totalInterest / params.amount) * 100).toFixed(1)}% del capitale iniziale`;
+
+            document.getElementById('cardTotalCost').textContent = formatCurrency(totalCost);
+            document.getElementById('cardTotalCostSub').textContent = `Spese totali: ${formatCurrency(params.initialFees + totalRecurringFees)}`;
+
+            document.getElementById('cardTaeg').textContent = `${taeg.toFixed(2)}%`;
+            document.getElementById('cardTaegSub').textContent = `TAN: ${(params.annualRate * 100).toFixed(2)}%`;
+
+            // Aggiorna Grafici
+            renderCharts(params.amount, totalInterest, params.initialFees + totalRecurringFees, schedule);
+
+            // Aggiorna Tabella
+            currentPage = 1;
+            renderTable();
+
+            // Se la vista confronto è attiva, aggiorna anche quella
+            if (!document.getElementById('compareView').classList.contains('hidden')) {
+                renderComparison();
+            }
+        }
+
+        // --- RENDER GRAFICI ---
+        function renderCharts(principal, interest, fees, schedule) {
+            const isDark = document.documentElement.classList.contains('dark');
+            const textColor = isDark ? '#cbd5e1' : '#475569';
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+
+            // 1. Doughnut Chart Composizione Costi
+            const ctxCost = document.getElementById('costBreakdownChart').getContext('2d');
+            if (costChartInstance) costChartInstance.destroy();
+
+            costChartInstance = new Chart(ctxCost, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Capitale Restituito', 'Interessi Totali', 'Spese Accessorie'],
+                    datasets: [{
+                        data: [principal, interest, fees],
+                        backgroundColor: ['#0284c7', '#f59e0b', '#10b981'],
+                        borderWidth: 2,
+                        borderColor: isDark ? '#1e293b' : '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: textColor, font: { family: 'Inter', size: 11 } }
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
+
+            // 2. Line Chart Evoluzione Debito Residuo
+            const ctxBalance = document.getElementById('balanceChart').getContext('2d');
+            if (balanceChartInstance) balanceChartInstance.destroy();
+
+            // Riduzione dati per performance
+            const step = Math.max(1, Math.floor(schedule.length / 30));
+            const sampledSchedule = schedule.filter((_, index) => index % step === 0 || index === schedule.length - 1);
+
+            balanceChartInstance = new Chart(ctxBalance, {
+                type: 'line',
+                data: {
+                    labels: sampledSchedule.map(item => `Rata ${item.period}`),
+                    datasets: [{
+                        label: 'Debito Residuo (€)',
+                        data: sampledSchedule.map(item => item.balance),
+                        borderColor: '#0284c7',
+                        backgroundColor: 'rgba(2, 132, 199, 0.1)',
+                        fill: true,
+                        tension: 0.2,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { ticks: { color: textColor, font: { size: 10 } }, grid: { display: false } },
+                        y: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: gridColor } }
+                    }
+                }
+            });
+        }
+
+        // --- RENDER CONFRONTO METODI ---
+        function renderComparison() {
+            const params = getInputs();
+            const methods = [
+                { id: 'french', title: 'Ammortamento Francese', desc: 'Rata costante, quota capitale crescente.' },
+                { id: 'italian', title: 'Ammortamento Italiano', desc: 'Quota capitale costante, rata decrescente.' },
+                { id: 'interestOnly', title: 'Solo Interessi / Pre-ammortamento', desc: 'Interessi periodici e capitale finale.' },
+                { id: 'german', title: 'Ammortamento Tedesco', desc: 'Interessi corrisposti in via anticipata.' }
+            ];
+
+            const container = document.getElementById('comparisonCardsContainer');
+            container.innerHTML = '';
+
+            let chartDatasets = [];
+            const colors = ['#0284c7', '#10b981', '#f59e0b', '#8b5cf6'];
+
+            methods.forEach((m, idx) => {
+                const compParams = { ...params, method: m.id };
+                const { schedule, totalInterest } = calculateAmortizationSchedule(compParams);
+                const totalCost = params.amount + totalInterest + params.initialFees + (schedule.length * params.recurringFees);
+                const initialInstallment = schedule.length > 0 ? schedule[0].installment : 0;
+                const finalInstallment = schedule.length > 0 ? schedule[schedule.length - 1].installment : 0;
+
+                // Card Element
+                const card = document.createElement('div');
+                card.className = "bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col justify-between";
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <h5 class="font-bold text-sm text-slate-900 dark:text-white">${m.title}</h5>
+                            <span class="w-3 h-3 rounded-full" style="background-color: ${colors[idx]}"></span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400 mb-4">${m.desc}</p>
+                        
+                        <div class="space-y-1.5 text-xs">
+                            <div class="flex justify-between"><span class="text-slate-500">Rata Iniziale:</span> <span class="font-semibold">${formatCurrency(initialInstallment)}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">Rata Finale:</span> <span class="font-semibold">${formatCurrency(finalInstallment)}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">Totale Interessi:</span> <span class="font-semibold text-amber-500">${formatCurrency(totalInterest)}</span></div>
+                            <div class="flex justify-between pt-2 border-t border-slate-200 dark:border-slate-700"><span class="font-semibold">Costo Complessivo:</span> <span class="font-bold text-brand-600 dark:text-brand-400">${formatCurrency(totalCost)}</span></div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+
+                // Sample per il grafico di confronto
+                const step = Math.max(1, Math.floor(schedule.length / 25));
+                const sampled = schedule.filter((_, index) => index % step === 0 || index === schedule.length - 1);
+
+                chartDatasets.push({
+                    label: m.title,
+                    data: sampled.map(item => ({ x: `Rata ${item.period}`, y: item.balance })),
+                    borderColor: colors[idx],
+                    borderWidth: 2,
+                    fill: false,
+                    pointRadius: 0
+                });
+            });
+
+            // Render Grafico Comparativo
+            const isDark = document.documentElement.classList.contains('dark');
+            const textColor = isDark ? '#cbd5e1' : '#475569';
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+
+            const ctxCompare = document.getElementById('compareChart').getContext('2d');
+            if (compareChartInstance) compareChartInstance.destroy();
+
+            compareChartInstance = new Chart(ctxCompare, {
+                type: 'line',
+                data: {
+                    labels: chartDatasets[0].data.map(d => d.x),
+                    datasets: chartDatasets.map(ds => ({
+                        label: ds.label,
+                        data: ds.data.map(d => d.y),
+                        borderColor: ds.borderColor,
+                        borderWidth: 2,
+                        fill: false,
+                        pointRadius: 0
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: textColor, font: { family: 'Inter', size: 11 } } }
+                    },
+                    scales: {
+                        x: { ticks: { color: textColor, font: { size: 10 } }, grid: { display: false } },
+                        y: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: gridColor } }
+                    }
+                }
+            });
+        }
+
+        // --- TABELLA E PAGINAZIONE ---
+        function renderTable() {
+            const tbody = document.getElementById('scheduleTableBody');
+            tbody.innerHTML = '';
+
+            const startIdx = (currentPage - 1) * pageSize;
+            const endIdx = Math.min(startIdx + pageSize, filteredSchedule.length);
+            const pageItems = filteredSchedule.slice(startIdx, endIdx);
+
+            if (pageItems.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400">Nessun dato trovato</td></tr>`;
+            } else {
+                pageItems.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors";
+                    tr.innerHTML = `
+                        <td class="py-2.5 px-4 font-medium">${item.period}</td>
+                        <td class="py-2.5 px-4 font-semibold text-slate-900 dark:text-white">${formatCurrency(item.installment + item.fees)}</td>
+                        <td class="py-2.5 px-4 text-emerald-600 dark:text-emerald-400">${formatCurrency(item.principal)}</td>
+                        <td class="py-2.5 px-4 text-amber-600 dark:text-amber-400">${formatCurrency(item.interest)}</td>
+                        <td class="py-2.5 px-4 text-slate-400">${formatCurrency(item.fees)}</td>
+                        <td class="py-2.5 px-4 font-medium">${formatCurrency(item.balance)}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            // Info Paginazione
+            document.getElementById('tablePaginationInfo').textContent = 
+                `Mostrando ${filteredSchedule.length > 0 ? startIdx + 1 : 0} - ${endIdx} di ${filteredSchedule.length} rate`;
+
+            // Controlli Paginazione
+            const totalPages = Math.ceil(filteredSchedule.length / pageSize);
+            const controls = document.getElementById('paginationControls');
+            controls.innerHTML = '';
+
+            if (totalPages > 1) {
+                const prevBtn = document.createElement('button');
+                prevBtn.className = `px-2.5 py-1 rounded-lg border text-xs font-semibold ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-100 dark:hover:bg-slate-700'}`;
+                prevBtn.innerHTML = `<i class="fa-solid fa-chevron-left"></i>`;
+                prevBtn.disabled = currentPage === 1;
+                prevBtn.onclick = () => { currentPage--; renderTable(); };
+                controls.appendChild(prevBtn);
+
+                const pageIndicator = document.createElement('span');
+                pageIndicator.className = "px-2 py-1 text-xs font-semibold text-slate-600 dark:text-slate-300";
+                pageIndicator.textContent = `${currentPage} / ${totalPages}`;
+                controls.appendChild(pageIndicator);
+
+                const nextBtn = document.createElement('button');
+                nextBtn.className = `px-2.5 py-1 rounded-lg border text-xs font-semibold ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-100 dark:hover:bg-slate-700'}`;
+                nextBtn.innerHTML = `<i class="fa-solid fa-chevron-right"></i>`;
+                nextBtn.disabled = currentPage === totalPages;
+                nextBtn.onclick = () => { currentPage++; renderTable(); };
+                controls.appendChild(nextBtn);
+            }
+        }
+
+        function filterTable() {
+            const query = document.getElementById('tableSearch').value.trim();
+            if (!query) {
+                filteredSchedule = [...currentSchedule];
+            } else {
+                filteredSchedule = currentSchedule.filter(item => 
+                    item.period.toString() === query ||
+                    (item.period / 12).toFixed(1) === query
+                );
+            }
+            currentPage = 1;
+            renderTable();
+        }
+
+        // --- ESPORTAZIONE CSV ---
+        function exportCSV() {
+            if (!currentSchedule || currentSchedule.length === 0) return;
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Rata,Quota Capitale (€),Quota Interessi (€),Spese (€),Rata Totale (€),Debito Residuo (€)\n";
+
+            currentSchedule.forEach(item => {
+                const total = item.installment + item.fees;
+                csvContent += `${item.period},${item.principal.toFixed(2)},${item.interest.toFixed(2)},${item.fees.toFixed(2)},${total.toFixed(2)},${item.balance.toFixed(2)}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "piano_ammortamento_mutuo.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // --- UTILITIES DI FORMATTAZIONE ---
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('it-IT', {
+                style: 'currency',
+                currency: 'EUR',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(value || 0);
+        }
+
+        function getFrequencyName(freq) {
+            switch(freq) {
+                case 12: return 'Mensile';
+                case 6: return 'Bimestrale';
+                case 4: return 'Trimestrale';
+                case 2: return 'Semestrale';
+                case 1: return 'Annuale';
+                default: return 'Mensile';
+            }
+        }
+    </script>
+</body>
+</html>
